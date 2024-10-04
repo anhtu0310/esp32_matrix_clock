@@ -1,0 +1,7 @@
+# Editor
+.vscode/
+firmware/.vscode/
+
+# Device Build
+firmware/build/
+firmware/managed_components/

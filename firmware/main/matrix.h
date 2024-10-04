@@ -1,0 +1,24 @@
+#pragma once
+#ifndef _MATRIX_H_
+#define _MATRIX_H_
+
+#include"led_driver.h"
+#include"font.h"
+#include "esp_log.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void addNumber(uint16_t *screen,uint8_t num, bool size);
+void addSpace(uint16_t *screen, int8_t spaces);
+void set_matrix_hours(uint8_t hour);
+void set_frame_display(uint32_t *scr_data);
+
+
+void display_time(uint8_t* time_str);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
