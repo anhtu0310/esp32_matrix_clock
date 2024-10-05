@@ -24,20 +24,32 @@ void app_main(void)
     init_display();
     // vTaskDelay(200);
     // set_frame_display(screen);
-    set_matrix_hours(27);
+    displayText("CONNECTING");
+    // set_matrix_hours(14);
+    // set_matrix_hours(15);
+
     wifi_init();
     sntp_time_init();
     time_t now = 0;
     struct tm timeinfo = { 0 };
     while(1){
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    char strftime_buf[64];
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    char* st = &strftime_buf[11];
-    ESP_LOGW("main", "The current date/time: %s", st);
-    display_time((uint8_t*)st);
-    vTaskDelay(1000/portTICK_PERIOD_MS);
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        char strftime_buf[64];
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        char* st = &strftime_buf[11];
+        ESP_LOGW("main", "The current date/time: %s %d",st, timeinfo.tm_min );
+        // display_time((uint8_t*)st);
+        displayTimeAni(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
+        // displayText(st);
+        // uint8_t hour =12;
+        // uint8_t min =15;
+        // uint8_t sec =0;
+
+
+        // displayTimeAni(hour+=1,min+=1,sec+=1);
+
+        vTaskDelay(500/portTICK_PERIOD_MS);
 
     }
 }

@@ -6,6 +6,7 @@
 #include"font.h"
 #include "esp_log.h"
 
+#define ASCII_OFFSET 48
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,9 +16,10 @@ void addSpace(uint16_t *screen, int8_t spaces);
 void set_matrix_hours(uint8_t hour);
 void set_frame_display(uint32_t *scr_data);
 
+void displayText(char* text);
 
 void display_time(uint8_t* time_str);
-
+void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second);
 #ifdef __cplusplus
 }
 #endif

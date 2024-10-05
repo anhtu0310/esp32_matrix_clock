@@ -80,11 +80,10 @@ void init_led_matrix()
         clear_led(spi[i]);
         vTaskDelay(1);
         init_led(spi[i], 1, 0);
-        vTaskDelay(1);
-        all_led(spi[i]);
-        vTaskDelay(50);
-        clear_led(spi[i]);
-        // vTaskDelay(100);
+        // vTaskDelay(1);
+        // all_led(spi[i]);
+        // vTaskDelay(50);
+        // clear_led(spi[i]);
         spi_device_release_bus(spi[i]);
     }
 }
