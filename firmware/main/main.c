@@ -32,6 +32,7 @@ void app_main(void)
     sntp_time_init();
     time_t now = 0;
     struct tm timeinfo = { 0 };
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     while(1){
         time(&now);
         localtime_r(&now, &timeinfo);
@@ -40,7 +41,11 @@ void app_main(void)
         char* st = &strftime_buf[11];
         ESP_LOGW("main", "The current date/time: %s %d",st, timeinfo.tm_min );
         // display_time((uint8_t*)st);
+
         displayTimeAni(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
+        // uint16_t tmp = xTaskGetTickCount()-xLastWakeTime;
+        // xLastWakeTime = xTaskGetTickCount();
+        // printf("%d \n", tmp);
         // displayText(st);
         // uint8_t hour =12;
         // uint8_t min =15;
@@ -49,7 +54,7 @@ void app_main(void)
 
         // displayTimeAni(hour+=1,min+=1,sec+=1);
 
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(900/portTICK_PERIOD_MS);
 
     }
 }

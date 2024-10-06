@@ -297,34 +297,35 @@ void displayRaw(uint16_t (*rollingDigit)[4], uint8_t chCnt)
 {
     uint16_t disp[7] = {0};
 
-    // switch (chCnt)
-    // {
-    // case 6:
-    // case 5:
-    addRawU16(disp, rollingDigit[1], 4);
-    addRawU16(disp, rollingDigit[0], 4);
-    addSpace(disp, -1);
-    led_matrix_set(2, (uint8_t *)disp);
-    // case 4:
-    // case 3:
-    addRawU16(disp, rollingDigit[3], 4);
-    addRawU16(disp, rollingDigit[2], 4);
-    addChar(disp, ':');
-    addSpace(disp, -2);
-    led_matrix_set(1, (uint8_t *)disp);
-    // case 2:
-    // case 1:
-    addSpace(disp, 3);
-    // addNumber(disp, time_str[7] - 48, 0);
-    addRawU16(disp, rollingDigit[5], 3);
-    addRawU16(disp, rollingDigit[4], 3);
-    addChar(disp, ':');
-    addSpace(disp, -1);
-    led_matrix_set(0, (uint8_t *)disp);
-    // default:
-    //     ESP_LOGE("display", "errr");
-    //     break;
-    // }
+    switch (chCnt)
+    {
+    case 0b00111111:
+    case 0b00111110:
+        addRawU16(disp, rollingDigit[1], 4);
+        addRawU16(disp, rollingDigit[0], 4);
+        addSpace(disp, -1);
+        led_matrix_set(2, (uint8_t *)disp);
+    case 0b00111100:
+    case 0b00111000:
+        addRawU16(disp, rollingDigit[3], 4);
+        addRawU16(disp, rollingDigit[2], 4);
+        addChar(disp, ':');
+        addSpace(disp, -2);
+        led_matrix_set(1, (uint8_t *)disp);
+    case 0b00110000:
+    case 0b00100000:
+        addSpace(disp, 3);
+        // addNumber(disp, time_str[7] - 48, 0);
+        addRawU16(disp, rollingDigit[5], 3);
+        addRawU16(disp, rollingDigit[4], 3);
+        addChar(disp, ':');
+        addSpace(disp, -1);
+        led_matrix_set(0, (uint8_t *)disp);
+        break;
+    default:
+        ESP_LOGE("display", "errr %X",chCnt);
+        break;
+    }
     // addNumber(disp, time_str[1] - 48, 1);
     // addNumber(disp, time_str[0] - 48, 1);
 
@@ -340,7 +341,7 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
     // if(tmpHour != hour) chCnt = 3;
     // else if (tmpMin != minute) chCnt = 2;
     // else if (tmpSec != second) chCnt = 1;
-    static uint8_t timeTmp[6] = {0};
+    static uint8_t timeTmp[6] = {99,99,99,99,99,99};
     uint8_t time[6];
     time[0] = hour / 10;
     time[1] = hour % 10;
@@ -357,15 +358,16 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
         {
             for (uint8_t j = 0; j < 4; j++)
             {
-                rollingDigit[i][j] = (numberBig[timeTmp[i]][j] | (numberBig[time[i]][j] << 7))>>1;
+                rollingDigit[i][j] = (numberBig[timeTmp[i]][j] | (numberBig[time[i]][j] << 7)) >> 1;
             }
             timeTmp[i] = time[i];
-            chCnt++;
+            chCnt |= (0x01<<i);
         }
         else
         {
             for (uint8_t j = 0; j < 4; j++)
                 rollingDigit[i][j] = numberBig[time[i]][j];
+            // chCnt<<=1;
         }
     }
     for (uint8_t i = 4; i < 6; i++)
@@ -377,12 +379,14 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
                 rollingDigit[i][j] = (numberSmall[timeTmp[i]][j] | (numberSmall[time[i]][j] << 5)) >> 1;
             }
             timeTmp[i] = time[i];
-            chCnt++;
+            chCnt |= (0x01<<i);
         }
         else
         {
             for (uint8_t j = 0; j < 3; j++)
                 rollingDigit[i][j] = numberSmall[time[i]][j];
+            // chCnt<<=1;
+        
         }
     }
 
@@ -400,32 +404,18 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
     {
         displayRaw(rollingDigit, chCnt);
         for (uint8_t k = 0; k < 4; k++)
-            if ((rollingDigit[k][0] | rollingDigit[k][1] | rollingDigit[k][2] | rollingDigit[k][3]) > 0x7F)
+            if ((rollingDigit[k][1] | rollingDigit[k][3]) > 0x7F)
                 for (uint8_t j = 0; j < 4; j++)
                 {
-                    // if (rollingDigit[k][j] <= 0x7F)
-                    // {
-                    //     break;
-                    // }
-                    // else
-                    // {
                     rollingDigit[k][j] = (rollingDigit[k][j] >> 1);
-                    // }
                 }
-        if (i < 4)
+        if (i < 5)
             for (uint8_t k = 4; k < 6; k++)
-                if ((rollingDigit[k][0] | rollingDigit[k][1] | rollingDigit[k][2]) > 0x7F)
-
+                if ((rollingDigit[k][0] | rollingDigit[k][1]) > 0x7F)
                     for (uint8_t j = 0; j < 3; j++)
                     {
-                        // if (rollingDigit[k][j] <= 0x80)
-                        // {
-                        //     break;
-                        // }
-                        // else
-                        {
-                            rollingDigit[k][j] = (rollingDigit[k][j] >> 1) & 0xFFFC;
-                        }
+
+                        rollingDigit[k][j] = (rollingDigit[k][j] >> 1) & 0xFFFC;
                     }
 
         vTaskDelay(5);
