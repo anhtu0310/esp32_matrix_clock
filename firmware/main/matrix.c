@@ -53,7 +53,7 @@ void addRawU16(uint16_t *screen, uint16_t *data, uint8_t lines)
     }
 }
 
-void addCharFull(uint32_t *screen, uint8_t character, bool size)
+void addCharFull(uint64_t *screen, uint8_t character, bool size)
 {
     character -= ASCII_OFFSET;
     switch (character)
@@ -64,6 +64,10 @@ void addCharFull(uint32_t *screen, uint8_t character, bool size)
     case 'W' - ASCII_OFFSET:
     case 'X' - ASCII_OFFSET:
     case 'Y' - ASCII_OFFSET:
+    case 'm' - ASCII_OFFSET:
+    case 'v' - ASCII_OFFSET:
+    case 'w' - ASCII_OFFSET:
+    case '~' - ASCII_OFFSET:
         for (uint8_t i = 0; i < 7; i++)
         {
             for (uint8_t j = 0; j < 4; j++)
@@ -93,6 +97,87 @@ void addCharFull(uint32_t *screen, uint8_t character, bool size)
         }
         break;
     }
+}
+uint8_t addCharArray(uint8_t *screen, uint8_t character)
+{
+    uint8_t cnt = 0;
+    character -= ASCII_OFFSET;
+    switch (character)
+    {
+    case 'M' - ASCII_OFFSET:
+    case 'T' - ASCII_OFFSET:
+    case 'V' - ASCII_OFFSET:
+    case 'W' - ASCII_OFFSET:
+    case 'X' - ASCII_OFFSET:
+    case 'Y' - ASCII_OFFSET:
+    case 'm' - ASCII_OFFSET:
+    case 'v' - ASCII_OFFSET:
+    case 'w' - ASCII_OFFSET:
+    case '~' - ASCII_OFFSET:
+    {
+        //     for (uint8_t i = 0; i < 4; i++)
+        //     {
+        //         if (!ASCII[character][3 - i])
+        //             continue;
+        //         screen[3 - i] = ASCII[character][3 - i];
+        //     }
+        //     screen[i] = ASCII[character][3];
+        //     i++;
+        //     screen[i] = 0;
+        //     if (!ASCII[character][0])
+        //         break;
+        screen[0] = ASCII[character][0];
+        screen[1] = ASCII[character][3];
+        screen[2] = ASCII[character][2];
+        screen[3] = ASCII[character][1];
+        screen[4] = ASCII[character][0];
+        cnt = 5;
+        // screen[cnt+=1] = ASCII[character][0];
+        // for (int8_t i = 3; i >= 0; i--)
+        // {
+        // printf("%d\n",i);
+        // if (!ASCII[character][i])
+        //     continue;
+        // screen[cnt] = ASCII[character][i];
+        //     cnt++;
+        // }
+        break;
+    }
+    default:
+        for (int8_t i = 3; i >= 0; i--)
+        {
+            if (!ASCII[character][i])
+                continue;
+            screen[cnt] = ASCII[character][i];
+            cnt++;
+        }
+
+        // i=0;
+        // while(ASCII[character][i])
+        // {
+        //     screen[i] = ASCII[character][i];
+        //     i++;
+        //     // ASCII[character]++;
+        // }
+        // i=3-i;
+        // for (i = 0; i < 4; i++)
+        // {
+        //     if (!ASCII[character][3-i])
+        //          continue;
+        //     screen[i] = ASCII[character][3-i];
+        // }
+        // // screen[i] = ASCII[character][i];
+        // // i++;
+        // screen[i] = 0;
+        // // screen[0] = ASCII[character][3];
+        // // screen[1] = ASCII[character][2];
+        // // screen[2] = ASCII[character][1];
+        // // screen[3] = ASCII[character][0];
+        // // screen[4] =  ASCII[character][0];
+        // // i = 4;
+        break;
+    }
+    return cnt + 1;
 }
 
 void addChar(uint16_t *screen, uint8_t character)
@@ -224,75 +309,85 @@ void display_time(uint8_t *time_str)
     led_matrix_set(0, (uint8_t *)disp);
 }
 
-void displayText(char *text)
+void set_frame_arr(uint8_t *scr_data, uint8_t len)
 {
-    char *tmp = text;
-    uint32_t disp[7] = {0};
-
-    while (*text)
-    {
-        // addCharFull(disp,*text,1);
-        text++;
-    }
-    while (text != tmp)
-    {
-        text--;
-        addCharFull(disp, *text, 1);
-    }
-    addSpaceFull(disp, -2);
-
-    set_frame_display(disp);
-}
-
-void set_frame_display(uint32_t *scr_data)
-{
-    // uint32_t screen[7] = {0}; //{0xffffffff,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x55555555};
     uint8_t pixel_byte[14] = {0};
-    uint32_t data[7];
-
-    // addNumber(6, 0);
-    // addNumber(7, 0);
-    // addNumber(5, 1);
-    // addNumber(1, 1);
-    // addSpace(2);
-    // addNumber(9, 1);
-    // addNumber(2, 1);
-    // addSpace(-1);
-
-    // uint8_t pixel_byte[14] = {0x55,1,0x05,0xff,0x55,0xff,0x55,0xff,0x55,0xff,0x55,0xff,0x55,0xff};
-    // while (1)
-    // {
-    /* code */
-    memcpy(data, scr_data, 28);
-
     for (int i = 2; i >= 0; i--)
     {
-        // spi_device_acquire_bus(spi[i], portMAX_DELAY);
-
-        for (int j = 0; j < 14; j += 2)
+        for (uint8_t k = 0; k < 7; k++)
         {
-            *(uint16_t *)&pixel_byte[j] = data[j / 2];
-            data[j / 2] = data[j / 2] >> 11;
-            // printf("num %d %X  %X num j \n",i, pixel_byte[j],pixel_byte[j+1]);
+            uint32_t tempSeg = *(uint16_t *)&pixel_byte[k * 2];
+            for (int j = 0; j < 11; j++)
+            {
+                tempSeg |= ((scr_data[j] & (0x01 << k)) << j);
+            }
+            *(uint16_t *)&pixel_byte[k * 2] = (uint16_t)(tempSeg >> k);
         }
-
-        // send_data(spi[i], TM16XX_CMD_DATA_AUTO, 0, NULL, 0);
-        // vTaskDelay(1 / 1000);
-        // send_data(spi[i], 0xc0, 0xff, pixel_byte, 14);
-        // spi_device_release_bus(spi[i]);
         led_matrix_set(i, pixel_byte);
+
+        memset(pixel_byte, 0, 14);
+        scr_data += 11;
     }
-    // for (int i = 0; i < 7; i++)
-    // {
-    //     screen[i] = ((bool)(screen[i] & 0x80000000)) + (screen[i] << 1);
-    // }
-    // vTaskDelay(10);
-    // }
 }
 
-// void rollAni(uint8_t num){
-//     static last
-// }
+void displayText(char *text)
+{
+    // char *tmp = text;
+    size_t len = strlen(text);
+    ESP_LOGW("b", " str len %d ", len);
+    if (len * 5 < 33)
+        len = 33;
+    else
+        len = len * 5;
+
+    uint8_t *disp = (uint8_t *)calloc(len, sizeof(uint8_t));
+    uint8_t addlen = 0;
+    // uint8_t **disp
+    while (*text)
+    {
+        addlen += addCharArray(&disp[addlen], *text);
+        text++;
+    }
+
+    // for (uint16_t i = 0; i < 40; i++)
+    // {
+    //     printf("%X \t", disp[i]);
+    // }
+    // printf(" \n");
+    for (uint8_t i = 0; i < 1; i++)
+    {
+        set_frame_arr(&disp[i], addlen);
+        vTaskDelay(100);
+    }
+}
+
+void set_frame_display(uint64_t *scr_data /*, uint8_t timeout*/)
+{
+    uint8_t pixel_byte[14] = {0};
+    uint64_t data[7];
+    while (1)
+    {
+        memcpy(data, scr_data, 56);
+
+        for (int i = 2; i >= 0; i--)
+        {
+
+            for (int j = 0; j < 14; j += 2)
+            {
+                *(uint32_t *)&pixel_byte[j] = data[j / 2];
+                data[j / 2] = data[j / 2] >> 11;
+            }
+
+            led_matrix_set(i, pixel_byte);
+        }
+        for (int i = 0; i < 7; i++)
+        {
+            scr_data[i] = ((bool)(scr_data[i] & 0x8000000000000000)) + (scr_data[i] << 1);
+        }
+        vTaskDelay(10);
+    }
+}
+
 void displayRaw(uint16_t (*rollingDigit)[4], uint8_t chCnt)
 {
     uint16_t disp[7] = {0};
@@ -323,25 +418,15 @@ void displayRaw(uint16_t (*rollingDigit)[4], uint8_t chCnt)
         led_matrix_set(0, (uint8_t *)disp);
         break;
     default:
-        ESP_LOGE("display", "errr %X",chCnt);
+        ESP_LOGE("display", "errr %X", chCnt);
         break;
     }
-    // addNumber(disp, time_str[1] - 48, 1);
-    // addNumber(disp, time_str[0] - 48, 1);
-
-    // addChar(disp,':');
 }
 
 void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
 {
-    // static uint8_t tmpHour = 0;
-    // static uint8_t tmpSec = 0;
-    // static uint8_t tmpMin = 0;
     uint8_t chCnt = 0;
-    // if(tmpHour != hour) chCnt = 3;
-    // else if (tmpMin != minute) chCnt = 2;
-    // else if (tmpSec != second) chCnt = 1;
-    static uint8_t timeTmp[6] = {99,99,99,99,99,99};
+    static uint8_t timeTmp[6] = {99, 99, 99, 99, 99, 99};
     uint8_t time[6];
     time[0] = hour / 10;
     time[1] = hour % 10;
@@ -361,7 +446,7 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
                 rollingDigit[i][j] = (numberBig[timeTmp[i]][j] | (numberBig[time[i]][j] << 7)) >> 1;
             }
             timeTmp[i] = time[i];
-            chCnt |= (0x01<<i);
+            chCnt |= (0x01 << i);
         }
         else
         {
@@ -379,27 +464,15 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
                 rollingDigit[i][j] = (numberSmall[timeTmp[i]][j] | (numberSmall[time[i]][j] << 5)) >> 1;
             }
             timeTmp[i] = time[i];
-            chCnt |= (0x01<<i);
+            chCnt |= (0x01 << i);
         }
         else
         {
             for (uint8_t j = 0; j < 3; j++)
                 rollingDigit[i][j] = numberSmall[time[i]][j];
             // chCnt<<=1;
-        
         }
     }
-
-    // for (uint8_t i = 0; i < 3; i++)
-    // {
-    //     rollingDigit[i] = (numberSmall[tmpS][i] | (numberSmall[time_str[7] - 48][i] << 5)) >> 1;
-    // }
-    // if (tmpS != (time_str[7] - 48))
-    // {
-    //     tmpS = time_str[7] - 48;
-    // }
-    // ESP_LOGI("SE", " %d %X %X %X", tmpS, rollingDigit[0], rollingDigit[1], rollingDigit[2]);
-    // uint8_t shift_len
     for (uint8_t i = 0; i < 7; i++)
     {
         displayRaw(rollingDigit, chCnt);
@@ -420,4 +493,56 @@ void displayTimeAni(uint8_t hour, uint8_t minute, uint8_t second)
 
         vTaskDelay(5);
     }
+}
+
+void displayTextOld(char *text)
+{
+    char *tmp = text;
+    uint64_t disp[7] = {0};
+
+    while (*text)
+    {
+        // addCharFull(disp,*text,1);
+        text++;
+    }
+    while (text != tmp)
+    {
+        text--;
+        addCharFull(disp, *text, 1);
+    }
+    // addSpaceFull(disp, -2);
+
+    set_frame_display(disp);
+}
+
+void displayTextLoop(char *text)
+{
+    // char *tmp = text;
+    size_t len = strlen(text);
+    if (len * 5 < 33)
+        len = 33;
+    else
+        len = len * 5;
+    ESP_LOGI("b", " str len %d ", len);
+
+    // uint8_t *disp = (uint8_t *)calloc(len, sizeof(uint8_t));
+    uint8_t disp[150] ={0};
+    uint8_t addlen = 0;
+    // uint8_t **disp
+    while (*text)
+    {
+        addlen += addCharArray(&disp[addlen], *text);
+        text++;
+    }
+
+    int i = 0;
+    while (1)
+    {
+        set_frame_arr(&disp[i], addlen);
+        vTaskDelay(15);
+        i++;
+        if (i == 150/*(len-33)*/)
+            i = 0;
+    }
+
 }
