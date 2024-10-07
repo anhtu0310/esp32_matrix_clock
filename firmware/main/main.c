@@ -20,26 +20,29 @@
 
 TaskHandle_t dispTask = NULL;
 
-static void disp_task(void* arg){
+static void disp_task(void *arg)
+{
     displayTextLoop("Connecting to Internet, syncing time !");
     vTaskDelete(NULL);
-
 }
 void app_main(void)
 {
     init_display();
     // set_frame_display(screen);
-    xTaskCreate(disp_task, "disp_task", 1024*2, NULL, 10, &dispTask);
+    xTaskCreate(disp_task, "disp_task", 1024 * 2, NULL, 10, &dispTask);
 
     // displayText("Hello");
 
     wifi_init();
     sntp_time_init();
     time_t now = 0;
-    struct tm timeinfo = { 0 };
+    struct tm timeinfo = {0};
     // TickType_t xLastWakeTime = xTaskGetTickCount();
-    if(dispTask) vTaskDelete(dispTask);
-    while(1){
+    if (dispTask)
+        vTaskDelete(dispTask);
+    uint8_t sec = 99;
+    while (1)
+    {
         time(&now);
         localtime_r(&now, &timeinfo);
         // char strftime_buf[64];?
@@ -47,11 +50,13 @@ void app_main(void)
         // char* st = &strftime_buf[11];
         // ESP_LOGW("main", "The current date/time: %s %d",st, timeinfo.tm_min );
         // display_time((uint8_t*)st);
-        displayTimeAni(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
-
+        if (sec != timeinfo.tm_sec)
+        {
+            sec = timeinfo.tm_sec;
+            displayTimeAni(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+        }
         // displayTimeAni(hour+=1,min+=1,sec+=1);
 
-        vTaskDelay(900/portTICK_PERIOD_MS);
-
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }

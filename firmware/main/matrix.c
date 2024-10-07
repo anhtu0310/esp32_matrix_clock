@@ -526,8 +526,8 @@ void displayTextLoop(char *text)
     ESP_LOGI("b", " str len %d ", len);
 
     // uint8_t *disp = (uint8_t *)calloc(len, sizeof(uint8_t));
-    uint8_t disp[150] ={0};
-    uint8_t addlen = 0;
+    uint8_t disp[183] ={0};
+    uint8_t addlen = 33;
     // uint8_t **disp
     while (*text)
     {
@@ -539,9 +539,9 @@ void displayTextLoop(char *text)
     while (1)
     {
         set_frame_arr(&disp[i], addlen);
-        vTaskDelay(15);
+        vTaskDelay(10);
         i++;
-        if (i == 150/*(len-33)*/)
+        if (i == 183/*(len-33)*/)
             i = 0;
     }
 

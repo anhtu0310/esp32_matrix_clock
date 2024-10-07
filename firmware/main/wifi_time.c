@@ -116,7 +116,10 @@ void wifi_init(void)
 }
 
 
-
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGE("SNTP", "Time synchronized");
+}
 // void time_sync_notification_cb(struct timeval *tv)
 // {
 //     ESP_LOGI(TAG, "Time synchronization");
@@ -153,7 +156,7 @@ static void print_servers(void)
 
     for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i){
         if (esp_sntp_getservername(i)){
-            ESP_LOGI(TAG, "server %d: %s", i, esp_sntp_getservername(i));
+            ESP_LOGI("SNTP", "server %d: %s", i, esp_sntp_getservername(i));
         } else {
             // we have either IPv4 or IPv6 address, let's print it
             char buff[48];
@@ -179,10 +182,10 @@ static void initialize_sntp(void)
 
 
     esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    config.sync_cb = time_sync_notification_cb;     // Note: This is only needed if we want
     esp_netif_sntp_init(&config);
-    // config.sync_cb = time_sync_notification_cb;     // Note: This is only needed if we want
 
-    print_servers();
+    // print_servers();
 
     // wait for time to be set
     time_t now = 0;
