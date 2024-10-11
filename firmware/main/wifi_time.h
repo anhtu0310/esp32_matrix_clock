@@ -13,6 +13,12 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "ping/ping_sock.h"
+#include "argtable3/argtable3.h"
+#include "lwip/sockets.h"
+#include "lwip/inet.h"
+#include "lwip/netdb.h"
+
 #include <time.h>
 #include <sys/time.h>
 #include "esp_netif_sntp.h"
@@ -22,8 +28,12 @@
 #define EXAMPLE_ESP_WIFI_SSID      "FPT Telecom-3F60"
 #define EXAMPLE_ESP_WIFI_PASS      "123456788"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
+
+#define PING_OK_BIT BIT0
+#define PING_FAIL_BIT      BIT1
 void wifi_init(void);
 
 void sntp_time_init(void);
-
+void initialize_ping();
+void ping_start();
 #endif

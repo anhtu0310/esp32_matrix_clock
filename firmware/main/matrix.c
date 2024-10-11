@@ -396,12 +396,15 @@ void displayRaw(uint16_t (*rollingDigit)[4], uint8_t chCnt)
     {
     case 0b00111111:
     case 0b00111110:
+
+    case 0b00111100:
+    case 0b00111000:
         addRawU16(disp, rollingDigit[1], 4);
         addRawU16(disp, rollingDigit[0], 4);
         addSpace(disp, -1);
         led_matrix_set(2, (uint8_t *)disp);
-    case 0b00111100:
-    case 0b00111000:
+    // case 0b00111100:
+    // case 0b00111000:
         addRawU16(disp, rollingDigit[3], 4);
         addRawU16(disp, rollingDigit[2], 4);
         addChar(disp, ':');

@@ -35,7 +35,7 @@ void all_led(spi_device_handle_t spi);
 esp_err_t led_matrix_set(uint8_t disp_id, uint8_t* payload);
 void init_led_matrix();
 esp_err_t init_display();
-
+void clear_led_matrix();
 
 #ifdef __cplusplus
 }

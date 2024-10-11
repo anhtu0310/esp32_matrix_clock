@@ -19,6 +19,7 @@
 
 /* FreeRTOS event group to signal when we are connected*/
 // static EventGroupHandle_t s_wifi_event_group;
+EventGroupHandle_t s_ping_event_group;
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -29,6 +30,8 @@
 static const char *TAG = "wifi station";
 
 static int s_retry_num = 0;
+
+esp_ping_handle_t ping;
 
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
@@ -115,49 +118,23 @@ void wifi_init(void)
     wifi_init_sta();
 }
 
-
 void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGE("SNTP", "Time synchronized");
 }
-// void time_sync_notification_cb(struct timeval *tv)
-// {
-//     ESP_LOGI(TAG, "Time synchronization");
 
-//     // setenv("TZ", "UTC-7DST-8,M10.5.0/2,M4.1.0/3", 1);
-//     // setenv("TZ", "UTC-7DST-7,M10.5.0/2,M4.1.0/3", 1);
-//     // tzset();
-//     // time_t now;
-//     // struct tm timeinfo;
-//     // struct timeval tv_now;
-//     struct tm timeInfoNow;
-//     gettimeofday(&tv_now, NULL);
-//     localtime_r(&(tv_now.tv_sec), &timeInfoNow);
-//     char strftime_buf[64];
-//     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeInfoNow);
-//     ESP_LOGW(TAG, "The current date/time: %s", strftime_buf);
-
-//     if (sntp_get_sync_mode() == SNTP_SYNC_MODE_SMOOTH) {
-//         struct timeval outdelta;
-//         if (sntp_get_sync_status() == SNTP_SYNC_STATUS_IN_PROGRESS) {
-//             adjtime(NULL, &outdelta);
-//             ESP_LOGI(TAG, "Waiting for adjusting time ... outdelta = %li sec: %li ms: %li us",
-//                         (long)outdelta.tv_sec,
-//                         outdelta.tv_usec/1000,
-//                         outdelta.tv_usec%1000);
-//             // vTaskDelay(2000 / portTICK_PERIOD_MS);
-//         }
-//     }
-//     // lastTimeActivate = tv_now.tv_sec;
-// }
 static void print_servers(void)
 {
     ESP_LOGI(TAG, "List of configured NTP servers:");
 
-    for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i){
-        if (esp_sntp_getservername(i)){
+    for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i)
+    {
+        if (esp_sntp_getservername(i))
+        {
             ESP_LOGI("SNTP", "server %d: %s", i, esp_sntp_getservername(i));
-        } else {
+        }
+        else
+        {
             // we have either IPv4 or IPv6 address, let's print it
             char buff[48];
             ip_addr_t const *ip = esp_sntp_getserver(i);
@@ -166,7 +143,6 @@ static void print_servers(void)
         }
     }
 }
-
 
 static void initialize_sntp(void)
 {
@@ -180,19 +156,19 @@ static void initialize_sntp(void)
     setenv("TZ", "UTC-7", 1);
     tzset();
 
-
     esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-    config.sync_cb = time_sync_notification_cb;     // Note: This is only needed if we want
+    config.sync_cb = time_sync_notification_cb; // Note: This is only needed if we want
     esp_netif_sntp_init(&config);
 
     // print_servers();
 
     // wait for time to be set
     time_t now = 0;
-    struct tm timeinfo = { 0 };
+    struct tm timeinfo = {0};
     int retry = 0;
     const int retry_count = 15;
-    while (esp_netif_sntp_sync_wait(2000 / portTICK_PERIOD_MS) == ESP_ERR_TIMEOUT && ++retry < retry_count) {
+    while (esp_netif_sntp_sync_wait(2000 / portTICK_PERIOD_MS) == ESP_ERR_TIMEOUT && ++retry < retry_count)
+    {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
     }
     time(&now);
@@ -202,9 +178,85 @@ static void initialize_sntp(void)
     ESP_LOGW(TAG, "The current date/time: %s", strftime_buf);
     // ESP_ERROR_CHECK( example_disconnect() );
     // esp_netif_sntp_deinit();
-
 }
 
-void sntp_time_init(void){
+void sntp_time_init(void)
+{
     initialize_sntp();
+}
+
+static void test_on_ping_success(esp_ping_handle_t hdl, void *args)
+{
+    // optionally, get callback arguments
+    // const char* str = (const char*) args;
+    // printf("%s\r\n", str); // "foo"
+    uint8_t ttl;
+    uint16_t seqno;
+    uint32_t elapsed_time, recv_len;
+    ip_addr_t target_addr;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TTL, &ttl, sizeof(ttl));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SIZE, &recv_len, sizeof(recv_len));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TIMEGAP, &elapsed_time, sizeof(elapsed_time));
+    ESP_LOGI("PING", "%ld bytes from %s icmp_seq=%d ttl=%d time=%ld ms\n",
+             recv_len, inet_ntoa(target_addr.u_addr.ip4), seqno, ttl, elapsed_time);
+    xEventGroupSetBits(s_ping_event_group, PING_OK_BIT);
+    esp_ping_stop(ping);
+}
+
+static void test_on_ping_timeout(esp_ping_handle_t hdl, void *args)
+{
+    uint16_t seqno;
+    ip_addr_t target_addr;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target_addr, sizeof(target_addr));
+    printf("From %s icmp_seq=%d timeout\n", inet_ntoa(target_addr.u_addr.ip4), seqno);
+}
+
+static void test_on_ping_end(esp_ping_handle_t hdl, void *args)
+{
+    uint32_t transmitted;
+    uint32_t received;
+    uint32_t total_time_ms;
+
+    esp_ping_get_profile(hdl, ESP_PING_PROF_REQUEST, &transmitted, sizeof(transmitted));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_REPLY, &received, sizeof(received));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_DURATION, &total_time_ms, sizeof(total_time_ms));
+    if (!received)
+        xEventGroupWaitBits(s_ping_event_group, PING_OK_BIT, pdTRUE, pdFALSE, 0);
+
+    printf("%ld packets transmitted, %ld received, time %ldms\n", transmitted, received, total_time_ms);
+    // xEventGroupSetBits(s_wifi_event_group, PING_OK_BIT);
+    esp_ping_stop(ping);
+}
+
+void initialize_ping()
+{
+    /* convert URL to IP address */
+    ip_addr_t target_addr;
+    target_addr.u_addr.ip4.addr = (7 << 24) | (1 << 16) | (168 << 8) | 192;
+    target_addr.type = IPADDR_TYPE_V4;
+
+    esp_ping_config_t ping_config = ESP_PING_DEFAULT_CONFIG();
+    ping_config.target_addr = target_addr; // target IP address
+    ping_config.count = 10;                // ping in infinite mode, esp_ping_stop can stop it
+
+    /* set callback functions */
+    esp_ping_callbacks_t cbs;
+    cbs.on_ping_success = test_on_ping_success;
+    cbs.on_ping_timeout = test_on_ping_timeout;
+    cbs.on_ping_end = test_on_ping_end;
+    // cbs.cb_args = "foo";  // arguments that feeds to all callback functions, can be NULL
+    // cbs.cb_args = eth_event_group;
+
+    esp_ping_new_session(&ping_config, &cbs, &ping);
+    esp_ping_start(ping);
+
+    s_ping_event_group = xEventGroupCreate();
+}
+
+void ping_start()
+{
+    esp_ping_start(ping);
 }

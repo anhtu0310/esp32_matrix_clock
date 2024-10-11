@@ -1,7 +1,7 @@
 #include "led_driver.h"
 
 spi_device_handle_t spi[3];
-const uint8_t cs_pins[3] = {PIN_NUM_CS0,PIN_NUM_CS1,PIN_NUM_CS2};
+const uint8_t cs_pins[3] = {PIN_NUM_CS0, PIN_NUM_CS1, PIN_NUM_CS2};
 
 void send_data(spi_device_handle_t spi, uint8_t cmd, uint8_t address, uint8_t *data, uint8_t size)
 {
@@ -56,7 +56,7 @@ void all_led(spi_device_handle_t spi)
     send_data(spi, TM16XX_CMD_DATA_AUTO, TM16XX_CMD_ADDRESS, data, 14);
 }
 
-esp_err_t led_matrix_set(uint8_t disp_id, uint8_t* payload)
+esp_err_t led_matrix_set(uint8_t disp_id, uint8_t *payload)
 {
     if (disp_id > 2)
         return -1;
@@ -67,7 +67,6 @@ esp_err_t led_matrix_set(uint8_t disp_id, uint8_t* payload)
         vTaskDelay(1 / 1000);
         send_data(spi[disp_id], TM16XX_CMD_ADDRESS, 0xff, payload, 14);
         spi_device_release_bus(spi[disp_id]);
-
     }
     return ESP_OK;
 }
@@ -88,6 +87,16 @@ void init_led_matrix()
     }
 }
 
+void clear_led_matrix()
+{
+    printf("lear\n");
+    for (int i = 0; i < 3; i++)
+    {
+        spi_device_acquire_bus(spi[i], portMAX_DELAY);
+        clear_led(spi[i]);
+        spi_device_release_bus(spi[i]);
+    }
+}
 esp_err_t init_display()
 {
     esp_err_t ret;
